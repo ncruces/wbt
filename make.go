@@ -1,4 +1,4 @@
-package aa
+package wbt
 
 import (
 	"cmp"
@@ -31,8 +31,7 @@ func makeTree[K cmp.Ordered, V any](keys []K, m map[K]V) *Tree[K, V] {
 		return nil
 	}
 
-	// AA trees lean right, so round down.
-	mid := (len(keys) - 1) / 2
+	mid := len(keys) / 2
 	left := makeTree(keys[:mid], m)
 	right := makeTree(keys[mid+1:], m)
 
@@ -69,7 +68,6 @@ func (tree *Tree[K, V]) Collect() map[K]V {
 }
 
 func (tree *Tree[K, V]) collect(m map[K]V) {
-	// AA trees lean right, so recurse left.
 	for tree != nil {
 		m[tree.key] = tree.value
 		tree.left.collect(m)

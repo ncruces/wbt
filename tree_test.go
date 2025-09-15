@@ -1,4 +1,4 @@
-package aa
+package wbt
 
 import (
 	"math/rand"
@@ -6,14 +6,9 @@ import (
 	"testing"
 )
 
-// https://web.archive.org/web/20181104022612/eternallyconfuzzled.com/tuts/datastructures/jsw_tut_andersson.aspx
-
 func TestKeyValueLeftRight(t *testing.T) {
 	var tt *Tree[int, string]
 
-	if lvl := tt.Level(); lvl != 0 {
-		t.Error(lvl)
-	}
 	if left := tt.Left(); left != nil {
 		t.Error(left)
 	}
@@ -28,9 +23,6 @@ func TestKeyValueLeftRight(t *testing.T) {
 	}
 	if value := tt.Value(); value != "one" {
 		t.Error(value)
-	}
-	if lvl := tt.Level(); lvl != 1 {
-		t.Error(lvl)
 	}
 	if left := tt.Left(); left != nil {
 		t.Error(left)
@@ -59,6 +51,8 @@ func TestPutGet(t *testing.T) {
 	if s, ok := tt.Get(5); !ok || s != "five" {
 		t.Error(s, ok)
 	}
+
+	tt.check()
 }
 
 func TestAddHasDelete(t *testing.T) {
@@ -130,62 +124,14 @@ func TestAddPatchGet(t *testing.T) {
 
 func TestTree_Add_inc(t *testing.T) {
 	var tt *Tree[int, struct{}]
-	//             3,3
-	//         /         \
-	//      1,2           5,2
-	//     /   \         /   \
-	//  0,1     2,1   4,1     6,1
 	tt = tt.Add(0).Add(1).Add(2).Add(3).Add(4).Add(5).Add(6)
 	tt.check()
-
-	if n := tt; n.key != 3 || n.Level() != 3 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.left; n.key != 1 || n.Level() != 2 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.right; n.key != 5 || n.Level() != 2 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.left.left; n.key != 0 || n.Level() != 1 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.left.right; n.key != 2 || n.Level() != 1 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.right.left; n.key != 4 || n.Level() != 1 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.right.right; n.key != 6 || n.Level() != 1 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
 }
 
 func TestTree_Add_dec(t *testing.T) {
 	var tt *Tree[int, struct{}]
-	//      3,2
-	//     /   \
-	//  2,1     5,2
-	//         /   \
-	//      4,1     6,1
 	tt = tt.Add(6).Add(5).Add(4).Add(3).Add(2)
 	tt.check()
-
-	if n := tt; n.key != 3 || n.Level() != 2 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.left; n.key != 2 || n.Level() != 1 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.right; n.key != 5 || n.Level() != 2 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.right.left; n.key != 4 || n.Level() != 1 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.right.right; n.key != 6 || n.Level() != 1 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
 }
 
 func TestTree_Add_existing(t *testing.T) {
@@ -202,32 +148,9 @@ func TestTree_Add_existing(t *testing.T) {
 
 func TestTree_Delete(t *testing.T) {
 	var tt *Tree[int, struct{}]
-	//             3,3
-	//         /         \
-	//      1,2           5,2
-	//     /   \         /   \
-	//  0,1     2,1   4,1     6,1
 	tt = tt.Add(0).Add(1).Add(2).Add(3).Add(4).Add(5).Add(6)
-	//      4,2
-	//     /   \
-	//  2,1     5,1
-	//             \
-	//              6,1
 	tt = tt.Delete(0).Delete(3).Delete(1)
 	tt.check()
-
-	if n := tt; n.key != 4 || n.Level() != 2 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.left; n.key != 2 || n.Level() != 1 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.right; n.key != 5 || n.Level() != 1 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
-	if n := tt.right.right; n.key != 6 || n.Level() != 1 {
-		t.Fatalf("%d,%d", n.key, n.Level())
-	}
 }
 
 func TestTree_DeleteMin(t *testing.T) {

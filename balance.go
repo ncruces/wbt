@@ -1,51 +1,65 @@
-package aa
+package wbt
 
-import (
-	"math"
-	"math/bits"
+import "cmp"
+
+// https://yoichihirai.com/bst.pdf
+
+const (
+	delta = 3
+	gamma = 2
 )
 
-const mask = bits.UintSize - 1
-
-// Balance stores both the level and the cardinality of an AA tree,
-// both offset by one: the zero value represents a leaf node of level one.
-//
-// The lowest 5 or 6 bits store the level,
-// the highest 27 or 58 bits store cardinality.
-//
-// This is sufficient for trees up to 32 or 64 levels,
-// with 134217728 or 288230376151711744 elements.
-//
-// With the smallest possible node size (4 machine words),
-// you'd need to exhaust at least half the address space (2GiB or 8EiB)
-// before you could hit these limits.
-type balance uint
-
-func (b balance) level() int {
-	return 1 + int(b&mask)
+func (tree *Tree[K, V]) left_rebalance() *Tree[K, V] {
+	if is_heavy(tree.Left(), tree.Right()) {
+		if is_single(tree.left.Right(), tree.left.Left()) {
+			frst := *tree.left
+			tree.left = frst.right
+			frst.right = tree.fixup()
+			return frst.fixup()
+		}
+		frst := *tree.left
+		scnd := *frst.right
+		tree.left = scnd.right
+		scnd.right = tree.fixup()
+		frst.right = scnd.left
+		scnd.left = frst.fixup()
+		return scnd.fixup()
+	}
+	return tree.fixup()
 }
 
-func (b balance) len() int {
-	return 1 + int(b>>bits.Len(mask))
+func (tree *Tree[K, V]) right_rebalance() *Tree[K, V] {
+	if is_heavy(tree.Right(), tree.Left()) {
+		if is_single(tree.right.Left(), tree.right.Right()) {
+			frst := *tree.right
+			tree.right = frst.left
+			frst.left = tree.fixup()
+			return frst.fixup()
+		}
+		frst := *tree.right
+		scnd := *frst.left
+		tree.right = scnd.left
+		scnd.left = tree.fixup()
+		frst.left = scnd.right
+		scnd.right = frst.fixup()
+		return scnd.fixup()
+	}
+	return tree.fixup()
 }
 
-func (tree *Tree[K, V]) setLevel(level int) {
-	tree.balance = balance(level-1) | tree.balance&^mask
+func is_heavy[K cmp.Ordered, V any](a, b *Tree[K, V]) bool {
+	// Nodes are are at least 4 machine words,
+	// so we'd run out of memory before this overflows.
+	return (a.Len() + 1) > delta*(b.Len()+1)
+}
+
+func is_single[K cmp.Ordered, V any](a, b *Tree[K, V]) bool {
+	// Nodes are are at least 4 machine words,
+	// so we'd run out of memory before this overflows.
+	return (a.Len() + 1) < gamma*(b.Len()+1)
 }
 
 func (tree *Tree[K, V]) fixup() *Tree[K, V] {
-	var sum uint64
-
-	if tree.left != nil {
-		sum += 1<<bits.Len(mask) + uint64(tree.left.balance) + 1
-	}
-	if tree.right != nil {
-		sum += 1<<bits.Len(mask) + uint64(tree.right.balance)&^mask
-	}
-	if sum > math.MaxUint {
-		panic("overflow")
-	}
-
-	tree.balance = balance(sum)
+	tree.childs = tree.Left().Len() + tree.Right().Len()
 	return tree
 }

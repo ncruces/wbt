@@ -1,3 +1,3 @@
-module github.com/ncruces/aa
+module github.com/ncruces/wbt
 
 go 1.23

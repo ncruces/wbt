@@ -1,4 +1,4 @@
-package aa
+package wbt
 
 import "cmp"
 
@@ -60,22 +60,16 @@ func join[K cmp.Ordered, V any](left, node, right *Tree[K, V]) *Tree[K, V] {
 		return node
 	}
 
-	llevel := left.Level()
-	rlevel := right.Level()
-	if rlevel == llevel+1 && llevel == right.right.Level() { // Can we create a 3-node?
-		rlevel = llevel // Avoid recursion, rebalancing.
-	}
-
 	switch {
-	case llevel < rlevel:
+	case is_heavy(right, left):
 		copy := *right
 		copy.left = join(left, node, right.left)
-		return copy.ins_rebalance()
+		return copy.left_rebalance()
 
-	case llevel > rlevel:
+	case is_heavy(left, right):
 		copy := *left
 		copy.right = join(left.right, node, right)
-		return copy.ins_rebalance()
+		return copy.right_rebalance()
 
 	default:
 		return makeNode(node.key, node.value, left, right)
@@ -89,7 +83,13 @@ func join2[K cmp.Ordered, V any](left, right *Tree[K, V]) *Tree[K, V] {
 	case right == nil:
 		return left
 	}
-	// Both DeleteMin/DeleteMax work; DeleteMin minimizes allocs.
-	right, node := right.DeleteMin()
-	return join(left, node, right)
+
+	var heir *Tree[K, V]
+	// Either works; this saves a few allocs.
+	if left.childs > right.childs {
+		left, heir = left.DeleteMax()
+	} else {
+		right, heir = right.DeleteMin()
+	}
+	return join(left, heir, right)
 }

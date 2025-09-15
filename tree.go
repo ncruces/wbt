@@ -1,24 +1,24 @@
-// Package aa implements immutable AA trees.
-package aa
+// package wbt implements immutable weight-balanced trees.
+package wbt
 
 import "cmp"
 
-// Tree is an immutable AA tree,
+// Tree is an immutable weight-balanced tree,
 // a form of self-balancing binary search tree.
 //
 // Use *Tree as a reference type; the zero value for *Tree (nil) is the empty tree:
 //
-//	var empty *aa.Tree[int, string]
+//	var empty *wbt.Tree[int, string]
 //	one := empty.Put(1, "one")
 //	one.Has(1) ⟹ true
 //
 // Note: the zero value for Tree{} is a valid — but non-empty — tree.
 type Tree[K cmp.Ordered, V any] struct {
-	left  *Tree[K, V]
-	right *Tree[K, V]
-	key   K
-	value V
-	balance
+	left   *Tree[K, V]
+	right  *Tree[K, V]
+	key    K
+	value  V
+	childs int
 }
 
 // Key returns the key at the root of this tree.
@@ -59,25 +59,12 @@ func (tree *Tree[K, V]) Right() *Tree[K, V] {
 	return tree.right
 }
 
-// Level returns the level of this AA tree.
-//
-// Notes:
-//   - the level of the empty tree (nil) is 0.
-//   - the height of a tree of level n is between n and 2·n.
-//   - the number of nodes in a tree of level n is between 2ⁿ-1 and 3ⁿ-1.
-func (tree *Tree[K, V]) Level() int {
-	if tree == nil {
-		return 0
-	}
-	return tree.balance.level()
-}
-
 // Len returns the number of nodes in this tree.
 func (tree *Tree[K, V]) Len() int {
 	if tree == nil {
 		return 0
 	}
-	return tree.balance.len()
+	return 1 + tree.childs
 }
 
 // Min finds the least key in this tree,
@@ -144,7 +131,7 @@ func (tree *Tree[K, V]) Get(key K) (value V, found bool) {
 	// Floor uses 2-way search, which is faster for strings:
 	//   https://go.dev/issue/71270
 	//   https://user.it.uu.se/~arnea/ps/searchproc.pdf
-	// Both Floor/Ceil work; Floor is faster since AA trees lean right.
+	// Both Floor/Ceil work.
 	node := tree.Floor(key)
 	if node != nil && (key == node.key || key != key) {
 		return node.value, true
@@ -205,7 +192,7 @@ func (tree *Tree[K, V]) Patch(key K, update func(node *Tree[K, V]) (value V, ok 
 		}
 		copy := *tree
 		copy.left = left
-		return copy.ins_rebalance()
+		return copy.left_rebalance()
 
 	case +1:
 		right := tree.right.Patch(key, update)
@@ -214,7 +201,7 @@ func (tree *Tree[K, V]) Patch(key K, update func(node *Tree[K, V]) (value V, ok 
 		}
 		copy := *tree
 		copy.right = right
-		return copy.ins_rebalance()
+		return copy.right_rebalance()
 	}
 }
 
@@ -243,7 +230,7 @@ func (tree *Tree[K, V]) delete(key K, pred func(node *Tree[K, V]) bool) *Tree[K,
 		}
 		copy := *tree
 		copy.left = left
-		return copy.del_rebalance()
+		return copy.right_rebalance()
 
 	case +1:
 		right := tree.right.delete(key, pred)
@@ -252,29 +239,34 @@ func (tree *Tree[K, V]) delete(key K, pred func(node *Tree[K, V]) bool) *Tree[K,
 		}
 		copy := *tree
 		copy.right = right
-		return copy.del_rebalance()
+		return copy.left_rebalance()
 
 	default:
 		if pred != nil && !pred(tree) {
 			return tree
 		}
 
-		// If tree.right is nil, tree.left is too.
-		if tree.left == nil {
+		switch {
+		case tree.left == nil:
 			return tree.right
+		case tree.right == nil:
+			return tree.left
 		}
 
 		copy := *tree
 		var heir *Tree[K, V]
 		// Either works; this saves a few allocs.
-		if copy.Level() == copy.right.Level() {
-			copy.right, heir = copy.right.DeleteMin()
-		} else {
+		if copy.left.childs > copy.right.childs {
 			copy.left, heir = copy.left.DeleteMax()
+			copy.key = heir.key
+			copy.value = heir.value
+			return copy.right_rebalance()
+		} else {
+			copy.right, heir = copy.right.DeleteMin()
+			copy.key = heir.key
+			copy.value = heir.value
+			return copy.left_rebalance()
 		}
-		copy.key = heir.key
-		copy.value = heir.value
-		return copy.del_rebalance()
 	}
 }
 
@@ -289,7 +281,7 @@ func (tree *Tree[K, V]) DeleteMin() (_, node *Tree[K, V]) {
 	}
 	copy := *tree
 	copy.left, node = tree.left.DeleteMin()
-	return copy.del_rebalance(), node
+	return copy.right_rebalance(), node
 }
 
 // DeleteMax returns a modified tree with its greatest key removed from it,
@@ -299,9 +291,9 @@ func (tree *Tree[K, V]) DeleteMax() (_, node *Tree[K, V]) {
 		return nil, nil
 	}
 	if tree.right == nil {
-		return nil, tree // tree.left, tree
+		return tree.left, tree
 	}
 	copy := *tree
 	copy.right, node = tree.right.DeleteMax()
-	return copy.del_rebalance(), node
+	return copy.left_rebalance(), node
 }
