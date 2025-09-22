@@ -62,12 +62,12 @@ func join[K cmp.Ordered, V any](left, node, right *Tree[K, V]) *Tree[K, V] {
 
 	switch {
 	case is_heavy(right, left):
-		copy := *right
+		copy := *right //nolint:nilaway
 		copy.left = join(left, node, right.left)
 		return copy.left_rebalance()
 
 	case is_heavy(left, right):
-		copy := *left
+		copy := *left //nolint:nilaway
 		copy.right = join(left.right, node, right)
 		return copy.right_rebalance()
 
