@@ -1,4 +1,4 @@
-// package wbt implements immutable weight-balanced trees.
+// Package wbt implements immutable weight-balanced trees.
 package wbt
 
 import "cmp"
@@ -131,7 +131,7 @@ func (tree *Tree[K, V]) Get(key K) (value V, found bool) {
 	// Floor uses 2-way search, which is faster for strings:
 	//   https://go.dev/issue/71270
 	//   https://user.it.uu.se/~arnea/ps/searchproc.pdf
-	// Both Floor/Ceil work.
+	// Floor(NaN) returns either nil or NaN.
 	node := tree.Floor(key)
 	if node != nil && (key == node.key || key != key) {
 		return node.value, true
